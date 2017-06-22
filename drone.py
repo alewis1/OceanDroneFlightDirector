@@ -60,9 +60,13 @@ def setVel(x, y, z, t):
 
 def setLoc(coords):
 	print "Moving vehicle to location " + str(coords)
-	vehicle.simple_goto(LocationGlobal(coords[0], coords[1], coords[2]))
-	while False: #not at destination
-            time.sleep(1)
+	currentLoc = vehicle.location.global_relative_frame
+	targetLoc = LocationGlobal(coords[0], coords[1], coords[2])
+	dist = get_distance_meters(currentLoc, targetLoc)
+	vehicle.simple_goto(targetLoc)
+	while dist > 5:
+		currentLoc = vehicle.location.global_relative_frame
+		dist = get_distance_meters(currentLoc, targetLoc)
 
 def release():
 	"""Release a pod."""
@@ -122,6 +126,12 @@ def dropPod():
 	setLoc(coords)
 	ind += 1
 	release()
+
+def locTest():
+	start()
+	coords = (0,0,0) #Enter coords before testing
+	setLoc(coords)
+	disarm()
 
 def main():
         pyramidTest()
