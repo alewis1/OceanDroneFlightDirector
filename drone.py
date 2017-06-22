@@ -6,7 +6,7 @@ import math
 podCoordList = [] #What coordinates to drop pods at?
 ind = 0
 vehicle = None
-homeCoords = None #Needs to be set
+homeCoords =  #Needs to be set
 
 def start():
 	global vehicle
@@ -30,7 +30,12 @@ def start():
 def disarm():
 	"""Disarms the vehicle. The vehicle automatically enters a "return to home" mode upon being disarmed, and performs a safe automatic touchdown"""
 	vehicle.armed = False
-  
+
+def get_distance_meters(locA, locB):
+	dlat = locB.lat - locA.lat
+	dlon = locB.lon - locA.lon
+	return math.sqrt((dlat**2) + (dlong**2)) * 1.1131195e5
+
 def returnHome():
 	"""Returns the vehicle to present home coords"""
 	setLoc(homeCoords)
