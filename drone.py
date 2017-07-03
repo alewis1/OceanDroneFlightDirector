@@ -3,10 +3,9 @@ from pymavlink import mavutil
 import time
 import math
 
-podCoordList = [] #What coordinates to drop pods at?
-ind = 0
+podCoords = None #Needs to be set
 vehicle = None
-homeCoords =  #Needs to be set
+homeCoords = None #Needs to be set
 
 def start():
 	global vehicle
@@ -19,13 +18,14 @@ def start():
 	
 	vehicle.mode = VehicleMode("GUIDED")
 	vehicle.armed = True
+	vehicle.groundspeed = 5
 		
 	while not vehicle.armed:
 		print "Arming Vehicle..."
 		time.sleep(1)
 	
-	vehicle.simple_takeoff(1)
-	time.sleep(5)
+	vehicle.simple_takeoff(5)
+	time.sleep(10)
 
 def disarm():
 	"""Disarms the vehicle. The vehicle automatically enters a "return to home" mode upon being disarmed, and performs a safe automatic touchdown"""
@@ -34,13 +34,19 @@ def disarm():
 def get_distance_meters(locA, locB):
 	dlat = locB.lat - locA.lat
 	dlon = locB.lon - locA.lon
-	return math.sqrt((dlat**2) + (dlong**2)) * 1.1131195e5
+	return math.sqrt((dlat**2) + (dlon**2)) * 1.1131195e5
 
 def returnHome():
 	"""Returns the vehicle to present home coords"""
 	setLoc(homeCoords)
             
-
+def get_loc(dNorth, dEast):
+	"""Returns a location offset by a certain amount from the current position. Inaccurate over very long distances or near the poles."""
+	currentLoc = vehicle.location.global_frame
+	rad = 6378137.0
+	dLat = dNorth/rad
+	dLon = dEast/(rad*math.cos(math.pi*currentLoc.lat/180))
+	return LocationGlobal(currentLoc.lat+(dLat*180/math.pi), currentLoc.lon+(dLon*180/math.pi), currentLoc.alt)
 
 def kill():
 	"""Deconstruct the vehicle object"""
@@ -65,17 +71,33 @@ def setVel(x, y, z, t):
 
 def setLoc(coords):
 	print "Moving vehicle to location " + str(coords)
-	currentLoc = vehicle.location.global_relative_frame
+	currentLoc = vehicle.location.global_frame
 	targetLoc = LocationGlobal(coords[0], coords[1], coords[2])
 	dist = get_distance_meters(currentLoc, targetLoc)
 	vehicle.simple_goto(targetLoc)
 	while dist > 5:
 		currentLoc = vehicle.location.global_relative_frame
 		dist = get_distance_meters(currentLoc, targetLoc)
+		print dist
+		print vehicle.mode
+	print "Got there!"
+
+def setLocRel(dNorth, dEast):
+	"""Move to a position a certain amount away from the current position"""
+	pos = get_loc(dNorth, dEast)
+	lat, lon, alt = pos.lat, pos.lon, pos.alt
+	setLoc((lat, lon, alt))
 
 def release():
 	"""Release a pod."""
 	pass
+
+def setHome():
+	global homeCoords
+	"""Sets the home location to the current position"""
+	pos = vehicle.location.global_frame
+	lat, lon, alt = pos.lat, pos.lon, pos.alt
+	homeCoords = (lat, lon, alt)
 
 def findPod():
 	"""Move to the pod's last known position, find it, and pick it up"""
@@ -123,23 +145,29 @@ def vertTest():
 
 def dropPod():
 	"""Go to the next location to drop a pod, and drop a pod"""
-	try:
-		coords = podCoordList[ind]
-	except:
-		coords = podCoordList[0]
-		ind = 0
-	setLoc(coords)
-	ind += 1
+	setLoc(podCoords)
 	release()
 
 def locTest():
 	start()
-	coords = (0,0,0) #Enter coords before testing
-	setLoc(coords)
+	print "1"
+	setHome()
+	print "2"
+	print homeCoords
+	setLocRel(20, 20)
+	print 3
+	setLocRel(-40, 0)
+	print 4
+	setLocRel(0, -40)
+	print 5
+	setLocRel(40, 0)
+	print 6
+	setLocRel(0, 40)
+	returnHome()
 	disarm()
 
 def main():
-        pyramidTest()
+        locTest()
         kill()
 
 main()
